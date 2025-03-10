@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
 using Core.Entities;
 using Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -18,14 +19,59 @@ public class ProductRepository(StoreContext context) : IProductRepository
         context.Products.Remove(product);
     }
 
+    public async Task<IReadOnlyList<string>> GetBrandsAsync()
+    {
+        return await context.Products.Select(x => x.Brand).Distinct().ToListAsync();
+    }
+
     public async Task<Product?> GetProductByIdAsync(int id)
     {
         return await context.Products.FindAsync(id);
     }
 
-    public async Task<IReadOnlyList<Product>> GetProductsAsync()
+    public async Task<IReadOnlyList<Product>> GetProductsAsync(string? brand, string? type,string? sort)
     {
-        return await context.Products.ToListAsync();
+        var query = context.Products.AsQueryable();
+
+        if(!string.IsNullOrWhiteSpace(brand)){
+            query = query.Where(x => x.Brand == brand);
+        }
+
+        
+        if(!string.IsNullOrWhiteSpace(type)){
+            query = query.Where(x => x.Type == type);
+        }
+
+        if(!string.IsNullOrWhiteSpace(sort)){
+            // query = sort switch
+            // {
+            //     "priceAsc" => query.OrderBy(x => x.Price),
+            //     "priceDesc" => query.OrderByDescending(x => x.Price),
+            //     _ => query.OrderBy(x => x.Name)
+            // };
+
+            
+        }
+
+        switch (sort)
+            {
+                case "priceAsc":
+                    query = query.OrderBy(x => x.Price);
+                    break;
+                case "priceDesc":
+                    query = query.OrderByDescending(x => x.Price);
+                    break;
+                default:
+                    query = query.OrderBy(x => x.Name);
+                    break;
+            }
+
+        return await query.ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetTypesAsync()
+    {
+         return await context.Products.Select(x => x.Type).Distinct().ToListAsync();
     }
 
     public bool ProductExists(int id)
